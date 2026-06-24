@@ -1,0 +1,51 @@
+using System.Collections;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace MonoGameLibrary.Graphics;
+
+public static class RenderTargetManager
+{
+    private static GraphicsDevice _graphicsDevice;
+    private static Dictionary<(int, int), Stack<RenderTarget2D>> _renderTargetPool;
+
+    public static void Initialize()
+    {
+        _renderTargetPool = new Dictionary<(int, int), Stack<RenderTarget2D>>();
+    }
+
+    public static void Load(GraphicsDevice graphicsDevice)
+    {
+        _graphicsDevice = graphicsDevice;
+    }
+
+
+    public static RenderTarget2D Get(int width, int height)
+    {
+        var key = (width, height);
+
+        if (!_renderTargetPool.ContainsKey(key))
+        {
+            _renderTargetPool[key] = new Stack<RenderTarget2D>();
+        }
+
+        if (_renderTargetPool[key].Count > 0)
+        {
+            return _renderTargetPool[key].Pop();
+        }
+
+        return new RenderTarget2D(_graphicsDevice, width, height);
+    }
+
+    public static void Release(RenderTarget2D renderTarget)
+    {
+        var key = (renderTarget.Width, renderTarget.Height);
+
+        if (!_renderTargetPool.ContainsKey(key))
+        {
+            _renderTargetPool[key] = new Stack<RenderTarget2D>();
+        }
+
+        _renderTargetPool[key].Push(renderTarget);
+    }
+}
