@@ -1,5 +1,6 @@
 
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -36,12 +37,16 @@ public static class GraphicsManager
         BlendState = BlendState.AlphaBlend;
     }
 
-    public static void Load(GraphicsDevice graphicsDevice, Effect defaultSpriteEffect, string renderConfigJson)
+    public static void Load(GraphicsDevice graphicsDevice, Effect defaultSpriteEffect, string renderGraphJson)
     {
         _graphicsDevice = graphicsDevice;
         _defaultSpriteEffect = defaultSpriteEffect;
-        _renderGraphPassesList = JsonSerializer.Deserialize<List<RenderGraphPass>>(renderConfigJson);
+        LoadRenderGraph(renderGraphJson);
+    }
 
+    public static void LoadRenderGraph(string json)
+    {
+        _renderGraphPassesList = JsonSerializer.Deserialize<List<RenderGraphPass>>(json);
         LoadRasterPassWrappers();
     }
 
@@ -82,14 +87,19 @@ public static class GraphicsManager
                 case EffectPass effectPass:
                     ExecuteEffectPass(effectPass);
                     continue;
-                case CompositePass:
+                case CompositePass compositePass:
+                    ExecuteCompositePass(compositePass);
                     continue;
-                case BlitPass:
+                case BlitPass blitPass:
+                    ExecuteBlitPass(blitPass);
                     continue;
-                case PresentPass:
+                case PresentPass presentPass:
+                    ExecutePresentPass(presentPass);
                     continue;
             }
         }
+
+        RenderTargetManager.ReleaseUsed();
     }
 
     private static void ExecuteRasterPass(RasterPass rasterPass)
@@ -142,7 +152,82 @@ public static class GraphicsManager
 
     private static void ExecuteCompositePass(CompositePass compositePass)
     {
-        // TODO
+        if (!_passOutputsDict.ContainsKey(compositePass.InputKeyBack) || !_passOutputsDict.ContainsKey(compositePass.InputKeyFront))
+        {
+            throw new System.Exception();
+        }
+
+        RenderTarget2D backRenderTarget = _passOutputsDict[compositePass.InputKeyBack];
+        RenderTarget2D frontRenderTarget =  _passOutputsDict[compositePass.InputKeyFront];
+
+        if (backRenderTarget.Width != frontRenderTarget.Width || backRenderTarget.Height != frontRenderTarget.Height)
+        {
+            throw new System.Exception();
+        }
+
+        _graphicsDevice.SetRenderTarget(backRenderTarget);
+
+        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
+        _spriteBatch.Draw(frontRenderTarget, backRenderTarget.Bounds, Color.White);
+        _spriteBatch.End();
+
+        if (_passOutputsDict.ContainsKey(compositePass.OutputKey))
+        {
+            throw new System.Exception();
+        }
+
+        _passOutputsDict.Add(compositePass.OutputKey, backRenderTarget);
+    }
+
+    private static void ExecuteBlitPass(BlitPass blitPass)
+    {
+        if (!_passOutputsDict.ContainsKey(blitPass.InputKey))
+        {
+            throw new System.Exception();
+        }
+
+        Rectangle rect = new Rectangle(blitPass.RectX, blitPass.RectY, blitPass.RectWidth, blitPass.RectHeight);
+
+        RenderTarget2D sourceRenderTarget = _passOutputsDict[blitPass.InputKey];
+        RenderTarget2D destinationRenderTarget = RenderTargetManager.Get(blitPass.TargetWidth, blitPass.TargetHeight);
+
+        _graphicsDevice.SetRenderTarget(destinationRenderTarget);
+        _graphicsDevice.Clear(Color.Transparent);
+
+        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
+        _spriteBatch.Draw(sourceRenderTarget, rect, Color.White);
+        _spriteBatch.End();
+
+        if (_passOutputsDict.ContainsKey(blitPass.OutputKey))
+        {
+            throw new System.Exception();
+        }
+
+        _passOutputsDict.Add(blitPass.OutputKey, destinationRenderTarget);
+    }
+
+    private static void ExecutePresentPass(PresentPass presentPass)
+    {
+        if (!_passOutputsDict.ContainsKey(presentPass.InputKey))
+        {
+            throw new System.Exception();
+        }
+
+        RenderTarget2D renderTarget = _passOutputsDict[presentPass.InputKey];
+
+        float scale = MathF.Min((float)_graphicsDevice.Viewport.Width / renderTarget.Width, (float)_graphicsDevice.Viewport.Height / renderTarget.Height);
+
+        float x = (_graphicsDevice.Viewport.Width - renderTarget.Width * scale) * 0.5f;
+        float y = (_graphicsDevice.Viewport.Height - renderTarget.Height * scale) * 0.5f;
+
+        Matrix transform = Matrix.CreateScale(scale, scale, 1) * Matrix.CreateTranslation(x, y, 0);
+
+        _graphicsDevice.SetRenderTarget(null);
+        _graphicsDevice.Clear(ClearColor);
+
+        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState, transformMatrix: transform);
+        _spriteBatch.Draw(renderTarget, _graphicsDevice.Viewport.Bounds, Color.White);
+        _spriteBatch.End();
     }
 
     public sealed class RasterPassWrapper

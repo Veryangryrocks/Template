@@ -35,8 +35,10 @@ public sealed class EffectPass : RenderGraphPass
 
 public sealed class CompositePass : RenderGraphPass
 {
-    [JsonPropertyName("inputs")]
-    public string[] InputKeysList { get; init; }
+    [JsonPropertyName("input_back")]
+    public string InputKeyBack{ get; init; }
+    [JsonPropertyName("input_front")]
+    public string InputKeyFront { get; init; }
     [JsonPropertyName("output")]
     public string OutputKey { get; init; }
 }
@@ -46,13 +48,17 @@ public sealed class BlitPass : RenderGraphPass
     [JsonPropertyName("input")]
     public string InputKey { get; init; }
     [JsonPropertyName("width")]
-    public int Width { get; init; }
+    public int TargetWidth { get; init; }
     [JsonPropertyName("height")]
-    public int Height  { get; init; }
-    [JsonPropertyName("x")]
-    public int X { get; init; }
-    [JsonPropertyName("y")]
-    public int Y { get; init; }
+    public int TargetHeight  { get; init; }
+    [JsonPropertyName("rect_width")]
+    public int RectWidth { get; init; }
+    [JsonPropertyName("rect_height")]
+    public int RectHeight  { get; init; }
+    [JsonPropertyName("rect_x")]
+    public int RectX { get; init; }
+    [JsonPropertyName("rect_y")]
+    public int RectY { get; init; }
     [JsonPropertyName("output")]
     public string OutputKey { get; init; }
 }

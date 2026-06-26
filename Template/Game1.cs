@@ -45,7 +45,7 @@ public class Game1 : Game
         RenderTargetManager.Load(GraphicsDevice);
         GameLoop.NameAssets();
         WindowManager.Load(GraphicsDevice, _graphicsDeviceManager);
-        GraphicsManager.Load(GraphicsDevice, _graphicsDeviceManager);
+        GraphicsManager.Load(GraphicsDevice);
 
         GameLoop.Initialize();
     }
@@ -77,7 +77,6 @@ public class Game1 : Game
         GameLoop.Draw();
 
         GraphicsManager.Render();
-        RenderTargetManager.ReleaseUsed();
 
 
         base.Draw(gameTime);
