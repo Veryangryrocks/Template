@@ -41,6 +41,7 @@ public static class GraphicsManager
     {
         _graphicsDevice = graphicsDevice;
         _defaultSpriteEffect = defaultSpriteEffect;
+        _spriteBatch = new SpriteBatch(graphicsDevice);
         LoadRenderGraph(renderGraphJson);
     }
 
@@ -243,10 +244,14 @@ public static class GraphicsManager
 
         public RasterPassWrapper(Dictionary<string, Layer> layersDict, string[] layerKeysArray, int width, int height)
         {
+            // resources
             _layersDict = layersDict;
             _layerKeysArray = layerKeysArray;
             Width = width;
             Height = height;
+
+            // runtime
+            Camera = new Camera(new Rectangle(0, 0, width, height));
         }
 
         public RenderTarget2D Render()
@@ -291,6 +296,11 @@ public static class GraphicsManager
     public sealed class Layer
     {
         private List<RenderObject> _renderObjectsList;
+
+        public Layer()
+        {
+            _renderObjectsList = new List<RenderObject>();
+        }
 
         public void Render(Matrix transform)
         {

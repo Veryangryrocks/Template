@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,6 +8,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGameLibrary.Content;
 using MonoGameLibrary.Graphics;
 using MonoGameLibrary.Input;
+using MonoGameLibrary.Util;
 
 namespace Template;
 
@@ -45,7 +47,11 @@ public class Game1 : Game
         RenderTargetManager.Load(GraphicsDevice);
         GameLoop.NameAssets();
         WindowManager.Load(GraphicsDevice, _graphicsDeviceManager);
-        GraphicsManager.Load(GraphicsDevice);
+
+        Effect effect = AssetManager.Get<Effect>("effects/spriteShader");
+        string json = File.ReadAllText(Path.Join(PathManager.ProjectDataDir, "render_graph.json")).ToString();
+
+        GraphicsManager.Load(GraphicsDevice, effect, json);
 
         GameLoop.Initialize();
     }

@@ -16,6 +16,8 @@ public static class GameLoop
     {
         _elapsedFrames = 0;
 
+        GraphicsManager.ClearColor = Color.Blue;
+
         CursorManager.Add("sword", AssetManager.Get<Texture2D>("textures/test2"), (0, 0));
         CursorManager.Set("sword");
     }
@@ -28,19 +30,12 @@ public static class GameLoop
     public static void Update()
     {
         _elapsedFrames += 1;
-
-        GraphicsManager.RenderPass rp = GraphicsManager.GetRenderPass("main");
     }
 
     public static void Draw()
     {
-        Sprite leftHalf = new Sprite("textures/test", 0, 0, 32, 64);
         Sprite sword = new Sprite("textures/test2");
 
-        GraphicsManager.Layer layer = GraphicsManager.GetRenderPass("main").GetLayer("main");
-
-        
-        layer.Add(RenderSprite.FromPositions(leftHalf, 100, 100, depth: 1.0f, color: new(255, 0, 255, 100), pivotValue: RenderSprite.PositionValue.TOP_LEFT));
-        layer.Add(RenderSprite.FromPositions(sword, 0, 0, 4, 4, pivotValue: RenderSprite.PositionValue.CENTER));
+        GraphicsManager.Draw("game", "main", new RenderSprite(sword, 0, 0));
     }
 }

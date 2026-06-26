@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace MonoGameLibrary.Graphics;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-[JsonDerivedType(typeof(EffectPass), "raster")]
+[JsonDerivedType(typeof(RasterPass), "raster")]
 [JsonDerivedType(typeof(EffectPass), "effect")]
 [JsonDerivedType(typeof(CompositePass), "composite")]
 [JsonDerivedType(typeof(BlitPass), "blit")]

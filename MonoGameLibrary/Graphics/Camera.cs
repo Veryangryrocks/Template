@@ -28,12 +28,12 @@ public sealed class Camera
         }
     }
     public Vector2 Origin { get; set; }
-    public Camera(Viewport viewport)
+    public Camera(Rectangle rect)
     {
-        Position = Vector2.Zero;
+        Position = new Vector2(rect.X, rect.Y);
         Rotation = new Degrees(0);
         Zoom = 1.0f;
-        Origin = new Vector2(viewport.Width / 2, viewport.Height / 2);
+        Origin = new Vector2(rect.Width / 2, rect.Height / 2);
     }
 
     public Matrix GetViewMatrix()

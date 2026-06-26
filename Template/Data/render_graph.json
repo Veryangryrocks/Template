@@ -1,0 +1,30 @@
+[
+    {
+        "type": "raster",
+        "layers": [
+            "main"
+        ],
+        "width": 640,
+        "height": 360,
+        "output": "game"
+    },
+    {
+        "type": "raster",
+        "layers": [
+            "main"
+        ],
+        "width": 640,
+        "height": 360,
+        "output": "ui"
+    },
+    {
+        "type": "composite",
+        "input_back": "game",
+        "input_front": "ui",
+        "output": "final"
+    },
+    {
+        "type": "present",
+        "input": "final"
+    }
+]
