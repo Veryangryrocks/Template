@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.Json;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -75,7 +77,7 @@ public class Game1 : Game
         GameLoop.Draw();
 
         GraphicsManager.Render();
-        GraphicsManager.Clear();
+        RenderTargetManager.ReleaseUsed();
 
 
         base.Draw(gameTime);

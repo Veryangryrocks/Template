@@ -36,3 +36,4 @@ C:\Users\campb\Documents\Programming\MonoGame\Template\Template\bin\Debug\net8.0
 C:\Users\campb\Documents\Programming\MonoGame\Template\Template\bin\Debug\net8.0\Content\Effects\SpriteShader.xnb
 C:\Users\campb\Documents\Programming\MonoGame\Template\Template\bin\Debug\net8.0\Content\textures\test.xnb
 C:\Users\campb\Documents\Programming\MonoGame\Template\Template\bin\Debug\net8.0\Content\textures\test2.xnb
+C:\Users\campb\Documents\Programming\MonoGame\Template\Template\obj\Debug\net8.0\Template.sourcelink.json

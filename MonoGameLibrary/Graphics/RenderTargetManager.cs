@@ -8,10 +8,13 @@ public static class RenderTargetManager
 {
     private static GraphicsDevice _graphicsDevice;
     private static Dictionary<(int, int), Stack<RenderTarget2D>> _renderTargetPool;
+    private static List<RenderTarget2D> _usedRenderTargetsList;
 
     public static void Initialize()
     {
         _renderTargetPool = new Dictionary<(int, int), Stack<RenderTarget2D>>();
+
+        _usedRenderTargetsList = new List<RenderTarget2D>();
     }
 
     public static void Load(GraphicsDevice graphicsDevice)
@@ -37,7 +40,7 @@ public static class RenderTargetManager
         return new RenderTarget2D(_graphicsDevice, width, height);
     }
 
-    public static void Release(RenderTarget2D renderTarget)
+    private static void Release(RenderTarget2D renderTarget)
     {
         var key = (renderTarget.Width, renderTarget.Height);
 
@@ -47,5 +50,14 @@ public static class RenderTargetManager
         }
 
         _renderTargetPool[key].Push(renderTarget);
+    }
+
+    public static void ReleaseUsed()
+    {
+        foreach (RenderTarget2D renderTarget in _usedRenderTargetsList)
+        {
+            Release(renderTarget);
+        }
+        _usedRenderTargetsList.Clear();
     }
 }

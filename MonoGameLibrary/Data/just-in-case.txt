@@ -1,0 +1,22 @@
+[
+    {
+        "type": "effect",
+        "input": "main",
+        "effects": [
+            "bloom"
+        ],
+        "output": "main_bloom"
+    },
+    {
+        "type": "joint",
+        "inputs": [
+            "main_bloom",
+            "ui"
+        ],
+        "output": "final"
+    },
+    {
+        "type": "present",
+        "input": "final"
+    }
+]

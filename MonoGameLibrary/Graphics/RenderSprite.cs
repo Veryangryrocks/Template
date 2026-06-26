@@ -41,7 +41,7 @@ public sealed class RenderSprite : RenderObject
         Color = color ?? Color.White;
         FlipX = flipX;
         FlipY = flipY;
-        Effect = effect ?? GraphicsManager.DefaultSpriteEffect;
+        Effect = effect;
     }
     public static RenderSprite FromPositions(Sprite sprite, int x, int y, float scaleX = 1, float scaleY = 1, float depth = 0, PositionValue originValue = PositionValue.TOP_LEFT, PositionValue pivotValue = PositionValue.TOP_LEFT, Degrees? rotation = null, Color? color = null, bool flipX = false, bool flipY = false, Effect effect = null)
     {

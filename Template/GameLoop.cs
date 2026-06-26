@@ -40,7 +40,7 @@ public static class GameLoop
         GraphicsManager.Layer layer = GraphicsManager.GetRenderPass("main").GetLayer("main");
 
         
-        layer.Add(GraphicsManager.RenderSprite.FromPositions(leftHalf, 100, 100, depth: 1.0f, color: new(255, 0, 255, 100), pivotValue: GraphicsManager.RenderSprite.PositionValue.TOP_LEFT));
-        layer.Add(GraphicsManager.RenderSprite.FromPositions(sword, 0, 0, 4, 4, pivotValue: GraphicsManager.RenderSprite.PositionValue.CENTER));
+        layer.Add(RenderSprite.FromPositions(leftHalf, 100, 100, depth: 1.0f, color: new(255, 0, 255, 100), pivotValue: RenderSprite.PositionValue.TOP_LEFT));
+        layer.Add(RenderSprite.FromPositions(sword, 0, 0, 4, 4, pivotValue: RenderSprite.PositionValue.CENTER));
     }
 }

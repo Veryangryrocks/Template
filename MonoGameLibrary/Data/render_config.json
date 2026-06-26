@@ -1,22 +1,14 @@
 [
     {
-        "input": "main",
-        "type": "effect",
-        "effects": [
-            "bloom"
-        ],
-        "output": "main_bloom"
-    },
-    {
+        "type": "composite",
         "inputs": [
-            "main_bloom",
+            "main",
             "ui"
         ],
-        "type": "joint",
         "output": "final"
     },
     {
-        "input": "final",
-        "type": "present"
+        "type": "present",
+        "input": "final"
     }
 ]

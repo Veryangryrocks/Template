@@ -1,199 +1,123 @@
-using System;
+
+
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGameLibrary.Content;
-using MonoGameLibrary.Util;
 
 namespace MonoGameLibrary.Graphics;
 
 public static class GraphicsManager
 {
+    // resources
     private static GraphicsDevice _graphicsDevice;
-    private static GraphicsDeviceManager _graphicsDeviceManager;
+    private static Effect _defaultSpriteEffect;
+    private static List<RenderGraphPass> _renderGraphPassesList;
+    private static Dictionary<string, RenderTarget2D> _passOutputsDict;
+    private static Dictionary<string, RasterPassWrapper> _rasterPassWrappersDict;
 
     private static SpriteVertex[] _vertices;
     private static short[] _indices;
     private static IndexBuffer _indexBuffer;
     private static VertexBuffer _vertexBuffer;
-    public static Effect DefaultSpriteEffect { get; private set; }
-
-    private static Dictionary<string, RenderPass> _renderPassesDict;
-    private static List<RenderGraphNode> _renderGraphNodesList;
-    private static Dictionary<string, RenderTarget2D> _nodeOutputsDict;
-
     private static SpriteBatch _spriteBatch;
 
-    public static Color ClearColor;
-    public static BlendState BlendState;
-    public static SamplerState SamplerState;
+    // runtime
+    public static Color ClearColor { get; set; }
+    public static SamplerState SamplerState { get; set; }
+    public static BlendState BlendState { get; set; }
 
     public static void Initialize()
     {
-        ClearColor = Color.Black;
+        ClearColor = Color.White;
+        SamplerState = SamplerState.PointClamp;
+        BlendState = BlendState.AlphaBlend;
     }
-    
-    public static void Load(GraphicsDevice graphicsDevice, GraphicsDeviceManager graphicsDeviceManager, Effect defaultSpriteEffect = null)
+
+    public static void Load(GraphicsDevice graphicsDevice, Effect defaultSpriteEffect, string renderConfigJson)
     {
         _graphicsDevice = graphicsDevice;
-        _graphicsDeviceManager = graphicsDeviceManager;
+        _defaultSpriteEffect = defaultSpriteEffect;
+        _renderGraphPassesList = JsonSerializer.Deserialize<List<RenderGraphPass>>(renderConfigJson);
 
-        _spriteBatch = new SpriteBatch(_graphicsDevice);
-
-        DefaultSpriteEffect = defaultSpriteEffect ?? AssetManager.Get<Effect>("effects/spriteShader");
-
-        ConfigureRenderPasses();
-        ConfigureRenderGraphNodes();
+        LoadRasterPassWrappers();
     }
 
-    private static void ConfigureRenderPasses()
+    private static void LoadRasterPassWrappers()
     {
-        var options = new JsonSerializerOptions
+        _rasterPassWrappersDict = new Dictionary<string, RasterPassWrapper>();
+
+        List<RasterPass> rasterPassesList = _renderGraphPassesList.OfType<RasterPass>().ToList();
+
+        foreach (RasterPass rasterPass in rasterPassesList)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        };
-
-        string path = Path.Join(PathManager.LibDataDir, "render_pass_config.json");
-        string json = File.ReadAllText(path);
-        var renderPassConfigsList = JsonSerializer.Deserialize<List<RenderPassConfig>>(json, options);
-
-        _renderPassesDict = new Dictionary<string, RenderPass>();
-
-        foreach (RenderPassConfig renderPassConfig in renderPassConfigsList)
-        {
-            string renderPassKey = renderPassConfig.Key;
-
+            string key = rasterPass.OutputKey;
             Dictionary<string, Layer> layersDict = new Dictionary<string, Layer>();
-            string[] keysArray = new string[renderPassConfig.LayerNamesArray.Length];
+            string[] layerKeysArray = rasterPass.LayerKeysArray;
+            int width = rasterPass.Width;
+            int height = rasterPass.Height;
 
-            for (int i = 0; i < renderPassConfig.LayerNamesArray.Length; i++)
+            foreach (string layerKey in layerKeysArray)
             {
-                string layerKey = renderPassConfig.LayerNamesArray[i];
-
                 layersDict.Add(layerKey, new Layer());
-                keysArray[i] = layerKey;
             }
 
-            RenderPass renderPass = new RenderPass(renderPassKey, layersDict, keysArray, renderPassConfig.Width, renderPassConfig.Height);
-
-            _renderPassesDict.Add(renderPassKey, renderPass);
+            _rasterPassWrappersDict.Add(key, new RasterPassWrapper(layersDict, layerKeysArray, width, height));
         }
-    }
-
-    public sealed class RenderPassConfig
-    {
-        [JsonPropertyName("key")]
-        public string Key {get; init;}
-        [JsonPropertyName("layers")]
-        public string[] LayerNamesArray {get; init;}
-        [JsonPropertyName("width")]
-        public int? Width {get; init;}
-        [JsonPropertyName("height")]
-        public int? Height {get; init;}
-    }
-
-    private static void ConfigureRenderGraphNodes()
-    {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
-        };
-
-        string path = Path.Join(PathManager.LibDataDir, "render_config.json");
-        string json = File.ReadAllText(path);
-        _renderGraphNodesList = JsonSerializer.Deserialize<List<RenderGraphNode>>(json, options);
-    }
-
-    [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
-    [JsonDerivedType(typeof(EffectNode), "effect")]
-    [JsonDerivedType(typeof(JointNode), "joint")]
-    [JsonDerivedType(typeof(PresentNode), "present")]
-    public abstract class RenderGraphNode;
-    public sealed class EffectNode : RenderGraphNode
-    {
-        [JsonPropertyName("input")]
-        public string InputKey { get; init; }
-
-        [JsonPropertyName("effects")]
-        public string[] EffectKeysArray { get; init; }
-        [JsonPropertyName("output")]
-        public string OutputKey { get; init; }
-    }
-
-    public sealed class JointNode : RenderGraphNode
-    {
-        [JsonPropertyName("inputs")]
-        public string[] InputKeysList { get; init; }
-        [JsonPropertyName("output")]
-        public string OutputKey { get; init; }
-    }
-
-    public sealed class PresentNode : RenderGraphNode
-    {
-        [JsonPropertyName("input")]
-        public string InputKey { get; init; }
     }
 
     public static void Render()
     {
-        _nodeOutputsDict = new Dictionary<string, RenderTarget2D>();
+        _passOutputsDict = new Dictionary<string, RenderTarget2D>();
 
-        IterateRenderPasses();
-        IterateNodes();
-    }
-    
-    private static void IterateRenderPasses()
-    {
-        foreach (KeyValuePair<string, RenderPass> kvp in _renderPassesDict)
+        foreach (RenderGraphPass renderGraphPass in _renderGraphPassesList)
         {
-            string key = kvp.Key;
-            RenderPass renderPass = kvp.Value;
-            
-            RenderTarget2D renderTarget = renderPass.Render();
-
-            if (_nodeOutputsDict.ContainsKey(key))
+            switch (renderGraphPass)
             {
-                continue;
-            }
-            _nodeOutputsDict.Add(key, renderTarget);
-        }
-    }
-
-    private static void IterateNodes()
-    {
-        foreach (RenderGraphNode node in _renderGraphNodesList)
-        {
-            switch (node)
-            {
-                case EffectNode effectNode:
-                    RunEffectNode(effectNode);
-                    break;
-                case JointNode jointNode:
-                    RunJointNode(jointNode);
-                    break;
-                case PresentNode presentNode:
-                    RunPresentNode(presentNode);
-                    break;
+                case RasterPass renderPass:
+                    ExecuteRasterPass(renderPass);
+                    continue;
+                case EffectPass effectPass:
+                    ExecuteEffectPass(effectPass);
+                    continue;
+                case CompositePass:
+                    continue;
+                case BlitPass:
+                    continue;
+                case PresentPass:
+                    continue;
             }
         }
     }
 
-    private static void RunEffectNode(EffectNode effectNode)
+    private static void ExecuteRasterPass(RasterPass rasterPass)
     {
-        if (!_nodeOutputsDict.ContainsKey(effectNode.InputKey))
+        string key = rasterPass.OutputKey;
+        RasterPassWrapper rasterPassWrapper = _rasterPassWrappersDict[key];
+        
+        if (rasterPassWrapper == null)
         {
-            throw new SystemException();
+            throw new System.Exception();
         }
 
-        RenderTarget2D inputRenderTarget = _nodeOutputsDict[effectNode.InputKey];
-        string[] effectKeysArray = effectNode.EffectKeysArray;
+        RenderTarget2D renderTarget = rasterPassWrapper.Render();
+        _passOutputsDict.Add(key, renderTarget);
+    }
 
+    private static void ExecuteEffectPass(EffectPass effectPass)
+    {
+        if (!_passOutputsDict.ContainsKey(effectPass.InputKey))
+        {
+            throw new System.Exception();
+        }
+
+        RenderTarget2D inputRenderTarget = _passOutputsDict[effectPass.InputKey];
         RenderTarget2D sourceRenderTarget = inputRenderTarget;
-        RenderTarget2D destinationRenderTarget = GetRenderTarget(inputRenderTarget.Width, inputRenderTarget.Height);
+        RenderTarget2D destinationRenderTarget = RenderTargetManager.Get(inputRenderTarget.Width, inputRenderTarget.Height);
+
+        string[] effectKeysArray = effectPass.EffectKeysArray;
 
         foreach (string effectKey in effectKeysArray)
         {
@@ -208,157 +132,64 @@ public static class GraphicsManager
             (sourceRenderTarget, destinationRenderTarget) = (destinationRenderTarget, sourceRenderTarget);
         }
 
-        if (_nodeOutputsDict.ContainsKey(effectNode.OutputKey))
+        if (_passOutputsDict.ContainsKey(effectPass.OutputKey))
         {
-            throw new SystemException();
+            throw new System.Exception();
         }
 
-        _nodeOutputsDict.Add(effectNode.OutputKey, sourceRenderTarget);
+        _passOutputsDict.Add(effectPass.OutputKey, sourceRenderTarget);
     }
 
-    public static void RunJointNode(JointNode jointNode)
+    private static void ExecuteCompositePass(CompositePass compositePass)
     {
-        RenderTarget2D[] renderTargetsArray = new RenderTarget2D[jointNode.InputKeysList.Length];
-
-        for (int i = 0; i < jointNode.InputKeysList.Length; i++)
-        {
-            string key = jointNode.InputKeysList[i];
-
-            if (!_nodeOutputsDict.ContainsKey(key))
-            {
-                throw new SystemException();
-            }
-
-            renderTargetsArray[i] = _nodeOutputsDict[key];
-        }
-
-        int width = renderTargetsArray[0].Width;
-        int height = renderTargetsArray[0].Height;
-
-        RenderTarget2D destinationRenderTarget = new RenderTarget2D(_graphicsDevice, width, height);
-        _graphicsDevice.SetRenderTarget(destinationRenderTarget);
-
-        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
-        foreach (RenderTarget2D renderTarget in renderTargetsArray)
-        {
-            _spriteBatch.Draw(renderTarget, destinationRenderTarget.Bounds, Color.White);
-        }
-        _spriteBatch.End();
-
-        if (_nodeOutputsDict.ContainsKey(jointNode.OutputKey))
-        {
-            throw new SystemException();
-        }
-
-        _nodeOutputsDict.Add(jointNode.OutputKey, destinationRenderTarget);
+        // TODO
     }
 
-    public static void RunPresentNode(PresentNode presentNode)
+    public sealed class RasterPassWrapper
     {
-        if (!_nodeOutputsDict.ContainsKey(presentNode.InputKey))
-        {
-            throw new SystemException();
-        }
-
-        RenderTarget2D sourceRenderTarget = _nodeOutputsDict[presentNode.InputKey];
-
-        _graphicsDevice.SetRenderTarget(null);
-
-        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
-        _spriteBatch.Draw(sourceRenderTarget, _graphicsDevice.Viewport.Bounds, Color.White);
-        _spriteBatch.End();
-    }
-
-    private static void ResizeBuffers()
-    {
-        if (_vertexBuffer == null || _vertexBuffer.VertexCount != _vertices.Length)
-        {
-            if (_vertexBuffer != null)
-            {
-                _vertexBuffer.Dispose();
-            }
-            _vertexBuffer = new VertexBuffer(_graphicsDevice, SpriteVertex.VertexDeclaration, _vertices.Length, BufferUsage.WriteOnly);
-        }
-
-        if (_indexBuffer == null || _indexBuffer.IndexCount != _indices.Length)
-        {
-            if (_indexBuffer != null)
-            {
-                _indexBuffer.Dispose();
-            }
-            _indexBuffer = new IndexBuffer(_graphicsDevice, IndexElementSize.SixteenBits, _indices.Length, BufferUsage.WriteOnly);
-        }
-    }
-
-    
-    
-
-    public sealed class RenderPass
-    {
-        // config
-        public readonly string Key;
+        // resources
         private readonly Dictionary<string, Layer> _layersDict;
-        private readonly string[] _keysArray;
+        private readonly string[] _layerKeysArray;
         public readonly int Width;
         public readonly int Height;
 
         // runtime
-        public Camera Camera;
-        public BlendState BlendState;
-        public SamplerState SamplerState;
+        public Camera Camera { get; set; }
 
-        // resources
-        private RenderTarget2D _renderTarget;
-        public RenderTarget2D RenderTarget => _renderTarget;
-        private Matrix _projection;
-
-        public RenderPass(string key, Dictionary<string, Layer> layersDict, string[] keysArray, int? width, int? height)
+        public RasterPassWrapper(Dictionary<string, Layer> layersDict, string[] layerKeysArray, int width, int height)
         {
-            // config
-            Key = key;
             _layersDict = layersDict;
-            _keysArray = keysArray;
-            Width = width ?? WindowManager.NativeWidth;
-            Height = height ?? WindowManager.NativeHeight;
-
-            // runtime
-            Camera = new Camera(_graphicsDevice.Viewport);
-            BlendState = BlendState.AlphaBlend;
-            SamplerState = SamplerState.PointClamp;
-            ClearColor = Color.Transparent;
-
-            // resources
-            _renderTarget = RenderTargetManager.Get(Width, Height);
-            _projection = Matrix.CreateOrthographicOffCenter(0, Width, Height, 0, 0, 1);;
+            _layerKeysArray = layerKeysArray;
+            Width = width;
+            Height = height;
         }
 
         public RenderTarget2D Render()
-        {   
-            _graphicsDevice.SetRenderTarget(_renderTarget);
-
-            _graphicsDevice.Clear(ClearColor);
-
-            _graphicsDevice.BlendState = BlendState;
-            _graphicsDevice.SamplerStates[0] = SamplerState;
-
+        {
             Matrix view = Camera.GetViewMatrix();
-            Matrix transform = view * _projection;
+            Matrix projection = Matrix.CreateOrthographicOffCenter(0, Width, Height, 0, 0, 1);
+            Matrix transform = view * projection;
 
-            foreach (string key in _keysArray)
+            RenderTarget2D renderTarget = RenderTargetManager.Get(Width, Height);
+            
+            _graphicsDevice.SetRenderTarget(renderTarget);
+            _graphicsDevice.Clear(Color.Transparent);
+            _graphicsDevice.SamplerStates[0] = SamplerState;
+            _graphicsDevice.BlendState = BlendState;
+
+            foreach (string key in _layerKeysArray)
             {
-                Layer layer = _layersDict[key];
-                layer.Render(transform);
+                _layersDict[key].Render(transform);
             }
 
-            return _renderTarget;
+            return renderTarget;
         }
 
         public void Clear()
         {
-            foreach (string key in _keysArray)
+            foreach (string key in _layerKeysArray)
             {
-                Layer layer = _layersDict[key];
-                layer.Clear();
+                _layersDict[key].Clear();
             }
         }
 
@@ -371,14 +202,14 @@ public static class GraphicsManager
             return _layersDict[key];
         }
     }
+
     public sealed class Layer
     {
-        private List<RenderObject> _renderObjectsList = new List<RenderObject>();
+        private List<RenderObject> _renderObjectsList;
 
         public void Render(Matrix transform)
         {
             List<RenderSprite> renderSpritesList = _renderObjectsList.OfType<RenderSprite>().ToList();
-                
             renderSpritesList.Sort((a, b) => b.Depth.CompareTo(a.Depth));
 
             if (renderSpritesList.Count == 0)
@@ -394,11 +225,11 @@ public static class GraphicsManager
             foreach (RenderSprite renderSprite in renderSpritesList)
             {
                 Texture2D texture = renderSprite.Sprite.Texture;
-                Effect effect = renderSprite.Effect;
+                Effect effect = renderSprite.Effect ?? _defaultSpriteEffect;
 
                 if (texture != currentTexture || effect != currentEffect)
                 {
-                    Flush(batch, transform, effect);
+                    Flush(batch, transform, currentEffect);
                     batch.Clear();
 
                     currentTexture = texture;
@@ -439,7 +270,7 @@ public static class GraphicsManager
             effect.Parameters["MatrixTransform"].SetValue(transform);
             effect.Parameters["SpriteTexture"].SetValue(batch[0].Sprite.Texture);
 
-            foreach (EffectPass effectPass in effect.CurrentTechnique.Passes)
+            foreach (Microsoft.Xna.Framework.Graphics.EffectPass effectPass in effect.CurrentTechnique.Passes)
             {
                 int primitiveCount = batch.Count * 2;
 
@@ -448,14 +279,64 @@ public static class GraphicsManager
             }
         }
 
-        public void Add(RenderObject renderObject)
+        private static void ResizeBuffers()
         {
-            _renderObjectsList.Add(renderObject);
+            if (_vertexBuffer == null || _vertexBuffer.VertexCount != _vertices.Length)
+            {
+                if (_vertexBuffer != null)
+                {
+                    _vertexBuffer.Dispose();
+                }
+                _vertexBuffer = new VertexBuffer(_graphicsDevice, SpriteVertex.VertexDeclaration, _vertices.Length, BufferUsage.WriteOnly);
+            }
+
+            if (_indexBuffer == null || _indexBuffer.IndexCount != _indices.Length)
+            {
+                if (_indexBuffer != null)
+                {
+                    _indexBuffer.Dispose();
+                }
+                _indexBuffer = new IndexBuffer(_graphicsDevice, IndexElementSize.SixteenBits, _indices.Length, BufferUsage.WriteOnly);
+            }
         }
 
         public void Clear()
         {
             _renderObjectsList.Clear();
         }
+
+        public void Add(RenderObject renderObject)
+        {
+            _renderObjectsList.Add(renderObject);
+        }
     }
+
+    public static void Draw(string rasterPassWrapperKey, string layerKey, RenderObject renderObject)
+    {
+        RasterPassWrapper rasterPassWrapper = GetRasterPassWrapper(rasterPassWrapperKey);
+
+        if (rasterPassWrapper == null)
+        {
+            return;
+        }
+
+        Layer layer = rasterPassWrapper.GetLayer(layerKey);
+
+        if (layer == null)
+        {
+            return;
+        }
+
+        layer.Add(renderObject);
+    }
+
+    public static RasterPassWrapper GetRasterPassWrapper(string key)
+    {
+        if (!_rasterPassWrappersDict.ContainsKey(key))
+        {
+            return null;
+        }
+        return _rasterPassWrappersDict[key];
+    }
+
 }

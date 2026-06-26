@@ -10,3 +10,4 @@ C:\Users\campb\Documents\Programming\MonoGame\Template\MonoGameLibrary\obj\Debug
 C:\Users\campb\Documents\Programming\MonoGame\Template\MonoGameLibrary\obj\Debug\net8.0\refint\MonoGameLibrary.dll
 C:\Users\campb\Documents\Programming\MonoGame\Template\MonoGameLibrary\obj\Debug\net8.0\MonoGameLibrary.pdb
 C:\Users\campb\Documents\Programming\MonoGame\Template\MonoGameLibrary\obj\Debug\net8.0\ref\MonoGameLibrary.dll
+C:\Users\campb\Documents\Programming\MonoGame\Template\MonoGameLibrary\obj\Debug\net8.0\MonoGameLibrary.sourcelink.json
