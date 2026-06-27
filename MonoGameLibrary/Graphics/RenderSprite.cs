@@ -49,7 +49,7 @@ public sealed class RenderSprite : RenderObject
         Vector2 pivot = GetPivot(new Rectangle(x, y, sprite.Width, sprite.Height), pivotValue);
         return new RenderSprite(sprite, x, y, scaleX, scaleY, depth, origin, pivot, rotation, color, flipX, flipY, effect);
     }
-    public override string ToString() => $"[{Sprite}, {X}, {Y}, {ScaleX}, {ScaleY}, {Depth}, {Pivot}, {Rotation}, {FlipX}, {FlipY}, {Effect}]";
+    public override string ToString() => $"RenderSprite [{Sprite}, {X}, {Y}, {ScaleX}, {ScaleY}, {Depth}, {Pivot}, {Rotation}, {FlipX}, {FlipY}]";
     public override int GetHashCode() => base.GetHashCode();
 
     private static Vector2 GetPivot(Rectangle rect, PositionValue positionValue)

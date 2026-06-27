@@ -1,4 +1,4 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/effects/spriteShader.fx","c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/bin/DesktopGL/effects/spriteShader.xnb","EffectProcessor","CompiledEffectContent",1161,1564,0.4895095
+"c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/effects/spriteShader.fx","c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/bin/DesktopGL/effects/spriteShader.xnb","EffectProcessor","CompiledEffectContent",2132,1673,0.2034216
 "c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/textures/test.png","c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/bin/DesktopGL/textures/test.xnb","TextureProcessor","Texture2DContent",3544,16469,0.0730213
 "c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/textures/test2.png","c:/Users/campb/Documents/Programming/MonoGame/Template/Template/Content/bin/DesktopGL/textures/test2.xnb","TextureProcessor","Texture2DContent",605,2789,0.0451371

@@ -16,7 +16,7 @@ public static class GameLoop
     {
         _elapsedFrames = 0;
 
-        GraphicsManager.ClearColor = Color.Blue;
+        GraphicsManager.ClearColor = Color.White;
 
         CursorManager.Add("sword", AssetManager.Get<Texture2D>("textures/test2"), (0, 0));
         CursorManager.Set("sword");
@@ -36,6 +36,6 @@ public static class GameLoop
     {
         Sprite sword = new Sprite("textures/test2");
 
-        GraphicsManager.Draw("game", "main", new RenderSprite(sword, 0, 0));
+        GraphicsManager.Draw("game", "main", new RenderSprite(sword, 100, 100, 5, 5));
     }
 }

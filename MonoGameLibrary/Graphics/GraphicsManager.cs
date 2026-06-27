@@ -27,14 +27,14 @@ public static class GraphicsManager
 
     // runtime
     public static Color ClearColor { get; set; }
-    public static SamplerState SamplerState { get; set; }
-    public static BlendState BlendState { get; set; }
+    public static SamplerState DefaultSamplerState { get; set; }
+    public static BlendState DefaultBlendState { get; set; }
 
     public static void Initialize()
     {
         ClearColor = Color.White;
-        SamplerState = SamplerState.PointClamp;
-        BlendState = BlendState.AlphaBlend;
+        DefaultSamplerState = SamplerState.PointClamp;
+        DefaultBlendState = BlendState.AlphaBlend;
     }
 
     public static void Load(GraphicsDevice graphicsDevice, Effect defaultSpriteEffect, string renderGraphJson)
@@ -101,6 +101,7 @@ public static class GraphicsManager
         }
 
         RenderTargetManager.ReleaseUsed();
+        Clear();
     }
 
     private static void ExecuteRasterPass(RasterPass rasterPass)
@@ -136,7 +137,7 @@ public static class GraphicsManager
 
             _graphicsDevice.SetRenderTarget(destinationRenderTarget);
 
-            _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState, effect: effect);
+            _spriteBatch.Begin(blendState: DefaultBlendState, samplerState: DefaultSamplerState, effect: effect);
             _spriteBatch.Draw(sourceRenderTarget, destinationRenderTarget.Bounds, Color.White);
             _spriteBatch.End();
 
@@ -168,7 +169,7 @@ public static class GraphicsManager
 
         _graphicsDevice.SetRenderTarget(backRenderTarget);
 
-        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
+        _spriteBatch.Begin(blendState: DefaultBlendState, samplerState: DefaultSamplerState);
         _spriteBatch.Draw(frontRenderTarget, backRenderTarget.Bounds, Color.White);
         _spriteBatch.End();
 
@@ -195,7 +196,7 @@ public static class GraphicsManager
         _graphicsDevice.SetRenderTarget(destinationRenderTarget);
         _graphicsDevice.Clear(Color.Transparent);
 
-        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState);
+        _spriteBatch.Begin(blendState: DefaultBlendState, samplerState: DefaultSamplerState);
         _spriteBatch.Draw(sourceRenderTarget, rect, Color.White);
         _spriteBatch.End();
 
@@ -214,20 +215,25 @@ public static class GraphicsManager
             throw new System.Exception();
         }
 
+        Console.WriteLine("present pass");
+
         RenderTarget2D renderTarget = _passOutputsDict[presentPass.InputKey];
-
-        float scale = MathF.Min((float)_graphicsDevice.Viewport.Width / renderTarget.Width, (float)_graphicsDevice.Viewport.Height / renderTarget.Height);
-
-        float x = (_graphicsDevice.Viewport.Width - renderTarget.Width * scale) * 0.5f;
-        float y = (_graphicsDevice.Viewport.Height - renderTarget.Height * scale) * 0.5f;
-
-        Matrix transform = Matrix.CreateScale(scale, scale, 1) * Matrix.CreateTranslation(x, y, 0);
-
+        
         _graphicsDevice.SetRenderTarget(null);
         _graphicsDevice.Clear(ClearColor);
 
-        _spriteBatch.Begin(blendState: BlendState, samplerState: SamplerState, transformMatrix: transform);
-        _spriteBatch.Draw(renderTarget, _graphicsDevice.Viewport.Bounds, Color.White);
+        float scale = MathF.Min(
+            (float)_graphicsDevice.Viewport.Width / renderTarget.Width, 
+            (float)_graphicsDevice.Viewport.Height / renderTarget.Height);
+
+        Rectangle dest = new(
+            (int)((_graphicsDevice.Viewport.Width - renderTarget.Width * scale) * 0.5f),
+            (int)((_graphicsDevice.Viewport.Height - renderTarget.Height * scale) * 0.5f),
+            (int)(renderTarget.Width * scale),
+            (int)(renderTarget.Height * scale));
+
+        _spriteBatch.Begin(blendState: DefaultBlendState, samplerState: DefaultSamplerState);
+        _spriteBatch.Draw(renderTarget, dest, Color.White);
         _spriteBatch.End();
     }
 
@@ -257,15 +263,20 @@ public static class GraphicsManager
         public RenderTarget2D Render()
         {
             Matrix view = Camera.GetViewMatrix();
-            Matrix projection = Matrix.CreateOrthographicOffCenter(0, Width, Height, 0, 0, 1);
-            Matrix transform = view * projection;
+            Matrix projection = Matrix.CreateOrthographicOffCenter(0, Width, Height, 0, -1, 1);
+            Matrix transform = projection;
 
             RenderTarget2D renderTarget = RenderTargetManager.Get(Width, Height);
             
             _graphicsDevice.SetRenderTarget(renderTarget);
             _graphicsDevice.Clear(Color.Transparent);
-            _graphicsDevice.SamplerStates[0] = SamplerState;
-            _graphicsDevice.BlendState = BlendState;
+            _graphicsDevice.SamplerStates[0] = DefaultSamplerState;
+            _graphicsDevice.BlendState = DefaultBlendState;
+            _graphicsDevice.Viewport = new Viewport(
+    0,
+    0,
+    renderTarget.Width,
+    renderTarget.Height);
 
             foreach (string key in _layerKeysArray)
             {
@@ -365,12 +376,39 @@ public static class GraphicsManager
             effect.Parameters["MatrixTransform"].SetValue(transform);
             effect.Parameters["SpriteTexture"].SetValue(batch[0].Sprite.Texture);
 
+            for (int i = 0; i < _indices.Length; i++)
+    Console.WriteLine(_indices[i]);
+
+            _graphicsDevice.RasterizerState = RasterizerState.CullNone;
+            _graphicsDevice.BlendState = BlendState.AlphaBlend;
+_graphicsDevice.DepthStencilState = DepthStencilState.None;
+_graphicsDevice.RasterizerState = RasterizerState.CullNone;
+
             foreach (Microsoft.Xna.Framework.Graphics.EffectPass effectPass in effect.CurrentTechnique.Passes)
             {
                 int primitiveCount = batch.Count * 2;
 
+                Console.WriteLine(effect.Name);
+Console.WriteLine(effect.CurrentTechnique.Name);
+Console.WriteLine("here");
+Console.WriteLine(effect.Parameters["MatrixTransform"]);
+Console.WriteLine(effect.Parameters["SpriteTexture"]);
+Console.WriteLine(effect.CurrentTechnique.Name);
+
+Console.WriteLine("ACTUALLY HERE");
+Console.WriteLine(_vertexBuffer);
+Console.WriteLine(_graphicsDevice.Indices);
+
                 effectPass.Apply();
-                _graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, primitiveCount);
+                //_graphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, primitiveCount);
+
+                _graphicsDevice.DrawIndexedPrimitives(
+    PrimitiveType.TriangleList,
+    baseVertex: 0,
+    minVertexIndex: 0,
+    numVertices: batch.Count * 4,
+    startIndex: 0,
+    primitiveCount: batch.Count * 2);
             }
         }
 
@@ -434,4 +472,11 @@ public static class GraphicsManager
         return _rasterPassWrappersDict[key];
     }
 
+    private static void Clear()
+    {
+        foreach (KeyValuePair<string, RasterPassWrapper> kvp in _rasterPassWrappersDict)
+        {
+            kvp.Value.Clear();
+        }
+    }
 }

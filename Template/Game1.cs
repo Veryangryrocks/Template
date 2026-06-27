@@ -49,7 +49,8 @@ public class Game1 : Game
         WindowManager.Load(GraphicsDevice, _graphicsDeviceManager);
 
         Effect effect = AssetManager.Get<Effect>("effects/spriteShader");
-        string json = File.ReadAllText(Path.Join(PathManager.ProjectDataDir, "render_graph.json")).ToString();
+        Console.WriteLine(effect);
+        string json = File.ReadAllText(Path.Join(PathManager.ProjectDataDir, "render_graph.json"));
 
         GraphicsManager.Load(GraphicsDevice, effect, json);
 
@@ -78,7 +79,6 @@ public class Game1 : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
 
         GameLoop.Draw();
 

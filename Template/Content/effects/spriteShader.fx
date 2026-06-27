@@ -16,9 +16,17 @@ sampler2D SpriteSampler = sampler_state
     Texture = <SpriteTexture>;
 };
 
+/*
 struct VSInput
 {
-    float4 Position : POSITION0;
+    float3 Position : POSITION0;
+    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
+};*/
+
+struct VSInput
+{
+    float3 Position : POSITION0;
     float2 TexCoord : TEXCOORD0;
     float4 Color : COLOR0;
 };
@@ -34,13 +42,58 @@ VSOutput MainVS(VSInput input)
 {
     VSOutput output;
 
-    output.Position = mul(input.Position, MatrixTransform);
+    float4 pos = float4(input.Position, 1.0f);
+
+    output.Position =
+    mul(float4(input.Position, 1), MatrixTransform);
 
     output.TexCoord = input.TexCoord;
     output.Color = input.Color;
 
     return output;
 }
+/*
+struct VSInput
+{
+    float4 Position : POSITION0;
+    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
+};
+
+struct VSOutput
+{
+    float4 Position : SV_POSITION;
+    float2 TexCoord : TEXCOORD0;
+    float4 Color : COLOR0;
+};
+/*
+VSOutput MainVS(VSInput input)
+{
+    VSOutput output;
+
+    output.Position = mul(input.Position, MatrixTransform);
+
+    output.TexCoord = input.TexCoord;
+    output.Color = input.Color;
+
+    return output;
+}*/
+/*
+VSOutput MainVS(VSInput input)
+{
+    VSOutput output;
+
+    output.Position = float4(
+        -0.5 + input.Position.x / 320.0,
+         0.5 - input.Position.y / 180.0,
+         0,
+         1);
+
+    output.TexCoord = input.TexCoord;
+    output.Color = input.Color;
+
+    return output;
+}*/
 
 float4 MainPS(VSOutput input) : COLOR0
 {
